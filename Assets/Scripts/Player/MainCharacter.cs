@@ -1,54 +1,70 @@
+using Netick;
 using UnityEngine;
 
-public class MainCharacter : MonoBehaviour
+public class MainCharacter : BaseNetworkBehaviour
 {
-    [SerializeField] private float _moveSpeed = 5.0f;
-    [SerializeField] private Animator _animator;
+    [SerializeField] private float _moveSpeed;
     [SerializeField] private SpriteRenderer _spriteRenderer;
-    [SerializeField] private Transform _target;
+    private Transform _target;
 
     [Header("Shoot Settings")]
     [SerializeField] private ArrowController _arrowPrefab;
-
     [SerializeField] private Collider2D _collider2D;
 
-    private bool IsShooting;
-    private bool IsMoving;
+    private CharacterInput _characterInput;
+    private CharacterInput CharacterInput => _characterInput ??= GetComponent<CharacterInput>();
 
+    private bool IsShooting;
+    private Animator _animator;
+    private bool IsMoving { get; set; }
     private Vector3 _nextPos;
+
+    public void Init(Transform target)
+    {
+        _target = target;
+    }
 
     private void OnEnable()
     {
-        InputManager.Instance.OnHorizontalInputDown += DoMovement;
-        InputManager.Instance.OnHorizontalInputUp += DoStopMove;
+        CharacterInput.OnHorizontalInputDown += DoMovement;
+        CharacterInput.OnHorizontalInputUp += DoStopMove;
+    }
+
+    public override void NetworkRender()
+    {
+        _animator.SetBool("IS_MOVING", IsMoving);
     }
 
     private void Awake()
     {
         _collider2D = GetComponent<Collider2D>();
+        _animator = GetComponent<Animator>();
     }
 
-    private void Update()
+    protected override void Tick()
     {
         if (!IsMoving) DoPostShoot();
 
-        _animator.SetBool("IS_MOVING", IsMoving);
         _nextPos = Vector2.zero;
     }
 
     private void DoMovement(int horizontal)
     {
         IsMoving = true;
+
         DoRotate(horizontal);
 
-        _nextPos = IsGroundForward() ? _moveSpeed * Time.deltaTime * transform.right : Vector2.zero;
+        _nextPos = IsGroundForward() ? _moveSpeed * Sandbox.FixedDeltaTime * transform.right : Vector2.zero;
 
         transform.position += _nextPos;
 
         IsShooting = false;
     }
 
-    private void DoStopMove() => IsMoving = false;
+    private void DoStopMove()
+    {
+        IsMoving = false;
+    }
 
     private void DoRotate(int horizontal)
     {
@@ -57,6 +73,7 @@ public class MainCharacter : MonoBehaviour
 
     private void DoPostShoot()
     {
+        if (!_target) return;
         if (IsShooting) return;
 
         IsShooting = true;
@@ -73,7 +90,7 @@ public class MainCharacter : MonoBehaviour
 
     private bool IsGroundForward()
     {
-        Ray ray = new Ray(transform.position + _collider2D.bounds.size.x * transform.right, Vector2.down);
+        Ray ray = new(transform.position + _collider2D.bounds.size.x * transform.right, Vector2.down);
         RaycastHit2D raycastHit2D = Physics2D.Raycast(ray.origin, ray.direction, 1.0f);
 
         if (raycastHit2D.collider == null) return false;

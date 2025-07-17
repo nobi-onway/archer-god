@@ -1,4 +1,5 @@
 using System.Collections;
+using Netick;
 using UnityEngine;
 
 public class ArrowController : ObjectPool
@@ -28,9 +29,10 @@ public class ArrowController : ObjectPool
         _spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
-    private void FixedUpdate()
+    protected override void Tick()
     {
         if (!_isActive) return;
+
         transform.rotation = Quaternion.Euler(0, 0, Angle);
     }
 

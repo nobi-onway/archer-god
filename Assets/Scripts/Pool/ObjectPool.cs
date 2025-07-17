@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public abstract class ObjectPool : MonoBehaviour, IObjectPool
+public abstract class ObjectPool : BaseNetworkBehaviour, IObjectPool
 {
     public event Action<ObjectPool> OnReturnToPool;
 
