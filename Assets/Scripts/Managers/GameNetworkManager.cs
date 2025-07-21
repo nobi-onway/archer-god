@@ -1,19 +1,21 @@
+using System;
 using System.Collections.Generic;
 using Netick;
 using Netick.Unity;
-using Unity.Services.Lobbies.Models;
 using UnityEngine;
+
+public enum ETeam { LEFT = 1, RIGHT = 0 }
 
 public class GameNetworkManager : NetworkEventsListener
 {
     [SerializeField] private NetworkObject _playerPrefab;
     [SerializeField] private Transform _leftTeamSpawnPoint, _rightTeamSpawnPoint;
 
-    private Dictionary<NetworkPlayerId, MainCharacter> PlayerLookUp;
-
     public override void OnStartup(NetworkSandbox sandbox)
     {
-        PlayerLookUp = new Dictionary<NetworkPlayerId, MainCharacter>();
+        if (!sandbox.IsServer) return;
+
+        sandbox.InitializePool(sandbox.GetPrefab("Arrow"), 5);
     }
 
     public override void OnInput(NetworkSandbox sandbox)
@@ -30,18 +32,17 @@ public class GameNetworkManager : NetworkEventsListener
 
     public override void OnPlayerJoined(NetworkSandbox sandbox, NetworkPlayerId player)
     {
-        if (sandbox.IsClient) return;
+        if (!sandbox.IsServer) return;
 
-        Vector3 spawnPos = sandbox.Players.Count == 1 ? _leftTeamSpawnPoint.position : _rightTeamSpawnPoint.position;
+        MainCharacter mainCharacter = sandbox.NetworkInstantiate(_playerPrefab, player).GetComponent<MainCharacter>();
 
-        MainCharacter mainCharacter = sandbox.NetworkInstantiate(_playerPrefab, spawnPos, Quaternion.identity, player).GetComponent<MainCharacter>();
-        PlayerLookUp.Add(player, mainCharacter);
+        ETeam team = (ETeam)Enum.GetValues(typeof(ETeam)).GetValue(sandbox.Players.Count % 2);
+        Vector3 spawnPos = team == ETeam.LEFT ? _leftTeamSpawnPoint.position : _rightTeamSpawnPoint.position;
 
-        if (sandbox.Players.Count == 2)
-        {
-            PlayerLookUp[sandbox.Players[0]].Init(PlayerLookUp[sandbox.Players[1]].transform);
-            PlayerLookUp[sandbox.Players[1]].Init(PlayerLookUp[sandbox.Players[0]].transform);
-        }
+        mainCharacter.Init(team, spawnPos);
+
+        sandbox.SetPlayerObject(player, mainCharacter.GetComponent<NetworkObject>());
+        GameManager.Instance.RegisterPlayer(sandbox, player);
     }
 }
 

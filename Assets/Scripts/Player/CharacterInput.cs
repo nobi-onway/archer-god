@@ -7,19 +7,17 @@ public class CharacterInput : NetworkBehaviour
 
     private bool IsLeftKeyHeld => _playerCharacterInput.IsLeftKeyHeld;
     private bool IsRightKeyHeld => _playerCharacterInput.IsRightKeyHeld;
-    private bool IsLeftKeyUp => _playerCharacterInput.IsLeftKeyUp;
-    private bool IsRightKeyUp => _playerCharacterInput.IsRightKeyUp;
 
-    public event Action<int> OnHorizontalInputDown;
+    public event Action<int> OnHorizontalInput;
     public event Action OnHorizontalInputUp;
 
     public override void NetworkFixedUpdate()
     {
         if (!FetchInput(out _playerCharacterInput)) return;
 
-        if (IsLeftKeyHeld) OnHorizontalInputDown?.Invoke(-1);
-        if (IsRightKeyHeld) OnHorizontalInputDown?.Invoke(1);
+        if (IsLeftKeyHeld) OnHorizontalInput?.Invoke(-1);
+        if (IsRightKeyHeld) OnHorizontalInput?.Invoke(1);
 
-        if (IsLeftKeyUp || IsRightKeyUp) OnHorizontalInputUp?.Invoke();
+        if (!IsLeftKeyHeld && !IsRightKeyHeld) OnHorizontalInput?.Invoke(0);
     }
 }

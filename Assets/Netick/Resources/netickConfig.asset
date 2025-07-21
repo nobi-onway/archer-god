@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: netickConfig
   m_EditorClassIdentifier: 
   Prefabs:
+  - {fileID: -8707415450961871738, guid: d11d8353cb85c324cb1bda57b21da03e, type: 3}
   - {fileID: 5041770428080105464, guid: a068b1754f3a1484d9b15dc2d88ce671, type: 3}
   AutoGetPrefabs: 1
   PrefabsPath: Assets/

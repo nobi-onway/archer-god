@@ -1,8 +1,9 @@
 using System.Collections;
 using Netick;
+using Netick.Unity;
 using UnityEngine;
 
-public class ArrowController : ObjectPool
+public class ArrowController : NetworkBehaviour
 {
     private const float SPEED = 11.0f;
     private const float DESTROY_DURATION = 1.0f;
@@ -11,27 +12,26 @@ public class ArrowController : ObjectPool
 
     private float Gravity => Mathf.Abs(Physics2D.gravity.y * _rb2D.gravityScale);
     private float Angle => Mathf.Atan2(_rb2D.linearVelocityY, _rb2D.linearVelocityX) * Mathf.Rad2Deg;
+    private float TickTime => Sandbox.TickToTime(Sandbox.Tick);
+    
+    private bool IsActive { get; set; }
 
-    private bool _isActive;
-
-    public void Init(Vector2 position, float x, float y)
+    public void Init(float x, float y)
     {
         Reset();
-
-        this.transform.position = position;
 
         InitVelocity(x - this.transform.position.x);
     }
 
-    private void Awake()
+    public override void NetworkAwake()
     {
         _rb2D = GetComponent<Rigidbody2D>();
-        _spriteRenderer = GetComponent<SpriteRenderer>();
+        _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
-    protected override void Tick()
+    public override void NetworkFixedUpdate()
     {
-        if (!_isActive) return;
+        if (!IsActive) return;
 
         transform.rotation = Quaternion.Euler(0, 0, Angle);
     }
@@ -52,35 +52,43 @@ public class ArrowController : ObjectPool
         _spriteRenderer.color = color;
 
         _rb2D.bodyType = RigidbodyType2D.Dynamic;
-        _isActive = true;
+        IsActive = true;
     }
 
     private void StopMotion()
     {
         _rb2D.linearVelocity = Vector2.zero;
         _rb2D.bodyType = RigidbodyType2D.Static;
-        _isActive = false;
+        IsActive = false;
 
         StartCoroutine(IE_FadeOut(DESTROY_DURATION));
     }
 
     private IEnumerator IE_FadeOut(float duration)
     {
-        float startTime = Time.time;
+        float startTime = TickTime;
 
-        while (Time.time - startTime < duration)
+        while (TickTime - startTime < duration)
         {
             Color color = _spriteRenderer.color;
-            color.a = 1 - (Time.time - startTime) / duration;
+            color.a = 1 - (TickTime - startTime) / duration;
             _spriteRenderer.color = color;
             yield return null;
         }
 
-        ReturnToPool();
+        RPC_Destroy();
+    }
+
+    [Rpc(RpcPeers.Owner, RpcPeers.Everyone, isReliable: true, localInvoke: true)]
+    private void RPC_Destroy()
+    {
+        if (!Sandbox.IsServer) return;
+
+        Sandbox.Destroy(this.GetComponent<NetworkObject>());
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if(collision.CompareTag("Ground")) StopMotion();
+        if (collision.CompareTag("Ground")) StopMotion();
     }
 }

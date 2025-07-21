@@ -1,22 +1,26 @@
+using System;
+using Netick.Unity;
 using UnityEngine;
 
-public class MonoSingleton<T> : MonoBehaviour where T : MonoBehaviour
+public class MonoSingleton<T> : MonoBehaviour where T : Component
 {
     private static T _instance;
 
-    public static T Instance
+    public static T Instance => SingletonExtension.GetSingleton(ref _instance);
+}
+
+public static class SingletonExtension
+{
+    public static T GetSingleton<T>(ref T instance) where T : Component
     {
-        get
+        if (instance == null)
         {
-            if (_instance == null)
+            instance = GameObject.FindAnyObjectByType<T>();
+            if (instance == null)
             {
-                _instance = FindAnyObjectByType<T>();
-                if (_instance == null)
-                {
-                    _instance = new GameObject(typeof(T).Name).AddComponent<T>();
-                }
+                instance = new GameObject(typeof(T).Name).AddComponent<T>();
             }
-            return _instance;
         }
+        return instance;
     }
 }
